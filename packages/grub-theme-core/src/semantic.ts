@@ -20,6 +20,7 @@ export interface BoxProps {
 
 export interface BootMenuSemantic extends BoxProps {
   item_color?: string;
+  item_font?: string;
   selected_item_color?: string;
   item_height?: string;
   item_spacing?: string;
@@ -30,6 +31,7 @@ export interface LabelSemantic extends BoxProps {
   text?: string;
   color?: string;
   font?: string;
+  align?: string;
 }
 
 export interface ImageSemantic extends BoxProps {
@@ -86,12 +88,13 @@ export function deriveSemantic(root: CSTRoot): SemanticIndex {
           bootMenu = {
             ...box(n.nodeId, path, p),
             item_color: p["item_color"]?.value,
+            item_font: p["item_font"]?.value,
             selected_item_color: p["selected_item_color"]?.value,
             item_height: p["item_height"]?.value,
             item_spacing: p["item_spacing"]?.value,
           };
         } else if (n.name === "label") {
-          labels.push({ ...box(n.nodeId, path, p), nodeId: n.nodeId, path, text: p["text"]?.value, color: p["color"]?.value, font: p["font"]?.value });
+          labels.push({ ...box(n.nodeId, path, p), nodeId: n.nodeId, path, text: p["text"]?.value, color: p["color"]?.value, font: p["font"]?.value, align: p["align"]?.value });
         } else if (n.name === "image") {
           images.push({ ...box(n.nodeId, path, p), path, file: p["file"]?.value });
         } else if (n.name === "progress_bar" || n.name === "circular_progress") {

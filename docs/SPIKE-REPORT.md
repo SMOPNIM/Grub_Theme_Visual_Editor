@@ -62,6 +62,15 @@
   Text: soft gate only (center drift budget 5% width; vertical excluded).
   Pixel-level raster check (getImageData border color) deferred: needs node-canvas
   or browser; geometry+color math covers Spike.
+- [x] Gate3 re-run AFTER the quote-parser fix (`preview-render.test.ts` 5/5):
+  tela semantic values are REAL (`#000000/#ffffff/#cccccc/info.png` — before the
+  fix they parsed as `"` garbage with silent fallbacks, so the old "color exact"
+  green was geometry-only). Mock-ctx proves the Canvas reads the fields end to end:
+  bg `rgb(0,0,0)`, boot stroke `rgb(255,255,255)`, countdown text `rgb(204,204,204)`.
+  Renderer upgraded (same zero-dep Canvas2D): entries as text rows + highlight,
+  labels via fillText+align, images dashed + filename, progress track + 35% fill.
+  The "black with lines" report was correct output of the old wireframe on tela's
+  black theme — now recognizable as a GRUB mock.
 - [x] Gate4-store: 10x monaco↔form alternation green (form values 21,23,…,29 —
   never equal to the running value, so the equality short-circuit can't mask a step).
 - Undo is TWO independent mechanisms (no shared stack; V1.1 merges them):

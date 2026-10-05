@@ -52,6 +52,13 @@ export function SourcePane() {
     const model = editor.getModel();
     if (!model) return;
 
+    // Belt-and-braces: any non-form source invalidates a pending form sync
+    // (e.g. undo() without an immediate markHistorySync must never replay it).
+    if (source !== "form" && lastFormEdit) {
+      useThemeStore.getState().consumeFormEdit();
+      return;
+    }
+
     // Path (a): versioned, consume-once surgical edit.
     if (source === "form" && lastFormEdit && lastFormEdit.version === version) {
       if (debounceRef.current) clearTimeout(debounceRef.current); // cancel stale parse
