@@ -1,13 +1,16 @@
 # Spike Report (4 gates → V3.1 freeze)
 
-- [x] Gate1-web: `pnpm --filter editor build` green (local Win + CI).
+- [x] Gate1-web: GREEN on Linux CI (pnpm 9.0.0 → install → core 13/13 →
+  editor 13/13 → collect-fixtures bytes identical 1765/1008/1010 → vite build).
+  `.gitattributes -text` proven cross-platform (Linux checkout == local bytes).
 - [x] Gate1-Windows-desktop: `target/debug/editor.exe` produced 2026-10-05
   (`tauri build --debug` full Rust link OK). Lesson: `tauri-build` demands
   `src-tauri/icons/icon.ico` even with `bundle.active:false` — placeholder icons
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
-- [ ] Gate1-Linux-desktop: pushed `master` to `github.com:SMOPNIM/Grub_Theme_Visual_Editor`
-  (new branch, remote was empty; `.gitattributes` included). Awaiting first Actions run —
-  paste back: run URL, failed job (web/linux-tauri), failed step, last 50–80 log lines.
+- [ ] Gate1-Linux-desktop: round 2 — apt/grub-mkfont/frontend-build/full Rust dep
+  compile all OK on CI; failed ONLY at `generate_context!`: `icons/icon.png` missing
+  (tauri-build demands it even with `bundle.active:false`; Windows link worked on .ico
+  alone, the macro path needs the .png). Fixed in `560be53`; awaiting round-3 run.
   beforeBuildCommand uses `pnpm --filter editor ...` (cwd-safe in monorepo).
 - [x] UI-1 (frontend-only, mock adapter — no @tauri-apps/* imports): text-only store
   (zustand+zundo temporal, limit 50; CST/semantic derived, never stored) +
