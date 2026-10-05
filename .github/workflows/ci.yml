@@ -29,6 +29,12 @@ jobs:
       # scope match against it is verified at vertical slice, not in Spike.
       - run: grub-mkfont --version
       - run: which grub2-theme-preview || echo "grub2-theme-preview absent (expected on CI image)"
+      # Icon gate (platform-independent): tauri's generate_context! requires RGBA
+      # icon.png even with bundle.active:false; Windows .ico path is laxer. Verify
+      # IHDR colortype+dimensions here so a bad icon fails in seconds, not after
+      # the full Rust compile. Asymmetry incidents so far: 3 (missing .ico,
+      # RGB .ico tolerated on Win, non-RGBA .png rejected on Linux).
+      - run: python3 scripts/make-icons.py --verify
       - run: pnpm --filter ./apps/editor build
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable

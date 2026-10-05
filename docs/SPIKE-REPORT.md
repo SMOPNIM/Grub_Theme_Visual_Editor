@@ -7,10 +7,16 @@
   (`tauri build --debug` full Rust link OK). Lesson: `tauri-build` demands
   `src-tauri/icons/icon.ico` even with `bundle.active:false` — placeholder icons
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
-- [ ] Gate1-Linux-desktop: round 2 — apt/grub-mkfont/frontend-build/full Rust dep
-  compile all OK on CI; failed ONLY at `generate_context!`: `icons/icon.png` missing
-  (tauri-build demands it even with `bundle.active:false`; Windows link worked on .ico
-  alone, the macro path needs the .png). Fixed in `560be53`; awaiting round-3 run.
+- [ ] Gate1-Linux-desktop: round 3 — failed ONLY at `generate_context!`:
+  `icons/icon.png is not RGBA` (our hand-written PNG was color type 2; tauri's
+  `image` crate on the Linux macro path requires color type 6). Fixed by regenerating
+  all icons as RGBA-8 + `icon.ico` entries re-embedded as RGBA PNGs (Vista+ style,
+  confirmed PNG entries not BMP). Local `--verify` passes (IHDR type+size gate).
+  CI now runs the same gate pre-compile. Awaiting round-4 run.
+- Icon asymmetry tally (3): (1) missing icon.ico despite active:false,
+  (2) RGB .ico tolerated on Windows link, (3) non-RGBA .png rejected on Linux macro.
+  Lesson locked: `bundle.active:false` skips packaging, NEVER icon validation.
+  Eliminated going forward by the CI `--verify` step (fails in seconds).
   beforeBuildCommand uses `pnpm --filter editor ...` (cwd-safe in monorepo).
 - [x] UI-1 (frontend-only, mock adapter — no @tauri-apps/* imports): text-only store
   (zustand+zundo temporal, limit 50; CST/semantic derived, never stored) +
