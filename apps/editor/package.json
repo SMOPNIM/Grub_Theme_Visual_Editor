@@ -13,6 +13,8 @@
     "@grub-theme/core": "workspace:*",
     "@hookform/resolvers": "^5.9.1",
     "@monaco-editor/react": "^4.7.0",
+    "@tauri-apps/plugin-dialog": "^2.8.1",
+    "@tauri-apps/plugin-fs": "^2.6.0",
     "immer": "^10.0.0",
     "jszip": "^3.10.2",
     "monaco-editor": "^0.57.0",

@@ -123,3 +123,11 @@ export zip with original asset paths).
   reshuffle) + missing-refs banner/console + font-rename light scan (inline red
   hint + console.warn iff zero .pf2 loaded). themeName defaults to title-text
   slug else filename slug, user-editable. Integration test `pr1-loop` runs in CI.
+- [x] PR2 directory import (2026-10-05, this commit): Web dual road
+  (webkitdirectory w/ structure vs multiple flat, capability labeled in UI) +
+  Tauri dir walk (lazy dynamic imports — separate web chunks, never fetched on
+  Web; symlinks skipped). Path rule FROZEN: absolutepaths relativized against
+  the theme.txt entry, verbatim remainder, basename fallback outside base
+  (`platform/paths.ts`, tested posix/win/subdir). themeName: dirname >
+  title-text > filename. Missing split: amber "not loaded" vs red "缺 N 项".
+  Glob refs (`select_*.png`) stay listed (GRUB expands at runtime; honest).

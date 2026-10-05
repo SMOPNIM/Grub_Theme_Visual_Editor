@@ -1,11 +1,14 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { scanMissingAssets, parseTheme } from "@grub-theme/core";
 import { useThemeStore } from "./store/themeStore.js";
 import { SourcePane } from "./components/SourcePane.js";
 import { AttrForm } from "./components/AttrForm.js";
 import { PreviewPane } from "./components/PreviewPane.js";
-import { buildExportZip, downloadBlob } from "./export/exporter.js";
+import { buildExportZip, downloadBlob, missingBanner, scanExportRefs } from "./export/exporter.js";
 import { mockAdapter, tela1080 } from "./platform/mockAdapter.js";
+import { supportsDirectoryPicker, pickThemeDir, pickThemeFiles } from "./platform/webImport.js";
+import { isTauri, tauriAdapter } from "./platform/tauriAdapter.js";
 
 function Toolbar() {
   const source = useThemeStore((s) => s.source);
@@ -17,6 +20,11 @@ function Toolbar() {
   const setThemeName = useThemeStore((s) => s.setThemeName);
   const fileRef = useRef<HTMLInputElement>(null);
   const [exportNote, setExportNote] = useState<string | null>(null);
+  const text = useThemeStore((s) => s.text);
+  const banner = useMemo(
+    () => missingBanner(resources.size, scanExportRefs(text, resources)),
+    [text, resources]
+  );
 
   const undo = () => {
     (useThemeStore as any).temporal.getState().undo();
@@ -31,6 +39,12 @@ function Toolbar() {
     if (!f) return;
     importFile(f.name, await f.text());
     setExportNote(null);
+  };
+
+  const onImportDir = async (dir: { name: string; files: Array<{ path: string; data: ArrayBuffer }> } | null) => {
+    if (!dir) return;
+    const result = useThemeStore.getState().importDir(dir.name, dir.files);
+    setExportNote(result === "no-theme-txt" ? "所选内容中没有 theme.txt，未导入。" : null);
   };
 
   const onExport = async () => {
@@ -60,15 +74,32 @@ function Toolbar() {
         <button onClick={() => mockAdapter.openThemeFile().then((f) => loadSample(new TextDecoder().decode(f.data)))}>
           Open (mock)
         </button>
+        <button
+          disabled={!supportsDirectoryPicker()}
+          title={supportsDirectoryPicker() ? "Chromium 目录选择，保留目录结构" : "当前浏览器不支持目录选择，请用多文件导入"}
+          onClick={() => void pickThemeDir().then((d) => onImportDir(d))}
+        >
+          导入目录
+        </button>
+        <button onClick={() => void pickThemeFiles().then((d) => onImportDir(d))}>
+          导入多文件
+        </button>
+        <button
+          disabled={!isTauri()}
+          title={isTauri() ? "Tauri 桌面目录选择" : "仅桌面应用可用"}
+          onClick={() => void tauriAdapter.openThemeDir().then((d) => onImportDir(d))}
+        >
+          打开目录 (桌面)
+        </button>
         <label>主题名 <input value={themeName} onChange={(e) => setThemeName(e.target.value)} style={{ width: 160 }} /></label>
         <button onClick={() => void onExport()}>导出 zip</button>
         <button onClick={undo}>Undo</button>
         <button onClick={redo}>Redo</button>
         <span>v{version} · {source}</span>
       </div>
-      {resources.size === 0 && (
-        <div style={{ background: "#fff3cd", padding: "4px 8px" }}>
-          资源未加载，导出仅含 theme.txt（背景/图标缺失）。Web 首版仅支持单文件导入。
+      {banner && (
+        <div style={{ background: banner.tone === "amber" ? "#fff3cd" : "#f8d7da", padding: "4px 8px" }}>
+          {banner.text}
         </div>
       )}
       {exportNote && <div style={{ background: "#f8d7da", padding: "4px 8px" }}>{exportNote}</div>}

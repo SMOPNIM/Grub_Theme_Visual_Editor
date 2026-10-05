@@ -8,6 +8,27 @@ import { parseTheme } from "../src/parser.js";
 import { serializeTheme } from "../src/serializer.js";
 import { applyPatch } from "../src/patch.js";
 import { valuesEqual } from "../src/compare.js";
+import { scanMissingAssets } from "../src/semantic.js";
+
+describe("font-key regex /(^|[-_])font$/", () => {
+  const src = [
+    'terminal-font: "Terminus 14"',
+    'title-font: "Sans 12"',
+    '+ boot_menu {',
+    '  item_font = "DejaVu 16"',
+    '  font = "Sans 12"',
+    "}",
+  ].join("\n");
+  it("four positives detected", () => {
+    const missing = scanMissingAssets(parseTheme(src), new Set());
+    const keys = missing.map((m) => m.split(":")[0]).sort();
+    expect(keys).toEqual(["font", "item_font", "terminal-font", "title-font"]);
+  });
+  it("two negatives ignored", () => {
+    const src2 = 'myfont: "X"\nitem_font_extra: "Y"\n';
+    expect(scanMissingAssets(parseTheme(src2), new Set())).toEqual([]);
+  });
+});
 
 describe("valuesEqual", () => {
   it("identical / whitespace-insensitive", () => {

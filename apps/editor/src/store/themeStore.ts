@@ -6,6 +6,7 @@ import { temporal } from "zundo";
 import { parseTheme, serializeTheme, applyPatch, valuesEqual } from "@grub-theme/core";
 import type { CSTRoot, SemanticIndex } from "@grub-theme/core";
 import { deriveSemantic } from "@grub-theme/core";
+import { findThemeEntry, relativizeToTheme } from "../platform/paths.js";
 
 export type EditSource = "monaco" | "form" | "import" | "history";
 
@@ -30,6 +31,12 @@ interface ThemeState {
   loadSample: (text: string) => void;
   /** PR1 import: single theme.txt (Web). Resources stay empty; banner says so. */
   importFile: (fileName: string, text: string) => void;
+  /**
+   * PR2 import: a directory (or multi-file set).
+   * themeName priority: dirName > title-text slug > theme filename.
+   * Returns "no-theme-txt" without touching state when nothing qualifies.
+   */
+  importDir: (dirName: string, files: Array<{ path: string; data: ArrayBuffer }>) => "ok" | "no-theme-txt";
   setThemeName: (name: string) => void;
   applyMonacoText: (text: string) => void;
   /** Semantic-equality short-circuit: equal values never bump version/history. */
@@ -104,6 +111,27 @@ export const useThemeStore = create<ThemeState>()(
           resources: new Map(),
           themeName: defaultThemeName(text, fileName),
         }),
+      importDir: (dirName, files) => {
+        const paths = files.map((f) => f.path);
+        const themePath = findThemeEntry(paths);
+        if (!themePath) return "no-theme-txt";
+        const rels = relativizeToTheme(themePath, paths);
+        const themeIdx = paths.indexOf(themePath);
+        const text = new TextDecoder().decode(files[themeIdx].data);
+        const resources = new Map<string, ArrayBuffer>();
+        files.forEach((f, i) => {
+          if (i !== themeIdx) resources.set(rels[i], f.data);
+        });
+        set({
+          text,
+          version: get().version + 1,
+          source: "import",
+          lastFormEdit: null,
+          resources,
+          themeName: dirName ? slugify(dirName) : defaultThemeName(text, themePath),
+        });
+        return "ok";
+      },
       setThemeName: (themeName) => set({ themeName: slugify(themeName) || get().themeName }),
       applyMonacoText: (text) =>
         set({ text, version: get().version + 1, source: "monaco", lastFormEdit: null }),
