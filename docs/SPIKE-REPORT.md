@@ -71,6 +71,21 @@
   labels via fillText+align, images dashed + filename, progress track + 35% fill.
   The "black with lines" report was correct output of the old wireframe on tela's
   black theme — now recognizable as a GRUB mock.
+- Runtime-content provenance (hardcoded mock vs theme-derived — read before citing
+  the preview as evidence):
+  | element | source | rationale |
+  |---|---|---|
+  | boot entry list (3 rows, 2nd highlighted) | HARDCODED mock | GRUB entries come from grub.cfg at boot, theme.txt has no such field |
+  | fill fraction 35% | HARDCODED mock | progress value is runtime state, not theme data |
+  | label string ("Booting in 5 seconds") | THEME-DERIVED (`text`, `%d`→5 for display) | field exists in theme.txt |
+  | all positions / sizes / colors / fonts(size) | THEME-DERIVED | layout engine reads semantic only |
+- Live-linkage matrix (`preview-render.test.ts` linkage suite, 4/4 green):
+  linked live: boot_menu.left/top/width/height, item_color, selected_item_color,
+  label.text/color/font/align, image geometry+filename, progress geometry+fg/bg.
+  STATIC by design (documented, V1.1): `*_pixmap_style`/`bar_style` styled boxes,
+  real font rasterization (fallback metrics), icon files, background image files.
+  Verdict: live theme simulation for geometry+color+text, static mock for pixmaps
+  and runtime state — NOT a static mock, NOT full fidelity.
 - [x] Gate4-store: 10x monaco↔form alternation green (form values 21,23,…,29 —
   never equal to the running value, so the equality short-circuit can't mask a step).
 - Undo is TWO independent mechanisms (no shared stack; V1.1 merges them):
@@ -89,10 +104,17 @@
   3. zundo history grows by exactly +1 entry.
   All three → Gate4 true green.
 
-## V3.1 freeze status
-- [x] Gate1: web green ×2 rounds, Windows exe local, Linux binary on CI.
-- [x] Gate2-A/B, [x] Gate3-measure, [x] Gate4-store.
-- [ ] Gate4-full (manual echo-guard checklist — needs `pnpm dev` + browser).
-- [ ] Freeze checklist #5 (fixture bytes — done via .gitattributes, proven equal),
-  #6 (real icons + active:true + full scope + preview verdict — deferred to V1.1).
-Spike gates effectively complete except the manual Gate4-full run.
+## V3.1 freeze status — FROZEN 2026-10-05
+(prereqs all met: Gate1/Gate2/Gate3-re/Gate4-store green; Gate4-full manual T1+T3
+passed by reviewer; preview displays normally on web; CI tests already run as
+EXPLICIT steps `pnpm --filter @grub-theme/core test` +
+`pnpm --filter ./apps/editor test` in the web job — never via beforeBuildCommand,
+so a future beforeBuildCommand change cannot silently drop them.)
+- [x] Gate1: web green ×3 rounds, Windows exe local, Linux binary on CI.
+- [x] Gate2-A/B, [x] Gate3-measure + re-run, [x] Gate4-store + manual T1/T3.
+- [x] Fixture bytes stable (.gitattributes, proven equal Linux==local).
+- Deferred to vertical slice (NOT in baseline): real icons + active:true,
+  grub-mkfont full-arg scope, grub2-theme-preview verdict, Exporter/zip,
+  resource-missing scan (moved EARLIER: fires on font rename, not only on export).
+Next: vertical-slice PR1 (import tela → form-edit left → Monaco+Canvas linkage →
+export zip with original asset paths).
