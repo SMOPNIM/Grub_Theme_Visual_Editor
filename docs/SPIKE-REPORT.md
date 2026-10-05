@@ -7,14 +7,21 @@
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
 - [ ] Gate1-Linux-desktop: CI job defined (webkit2gtk-4.1/gtk3/ayatana/librsvg2/patchelf +
   rust-cache + `grub-common` for the `grub-mkfont --version` real-call smoke); awaits first green run.
-- Bundle note: Spike keeps `bundle.active:false` (compile-only). V3.1 freeze REQUIRES
-  flipping back to `true` + real icons, else vertical slice reworks packaging.
+- Bundle note (TEMPORARY, Spike only): `bundle.active:false` (compile-only) + placeholder
+  icons from `scripts/make-icons.py` (stdlib-only, must NOT be mistaken for release assets;
+  `apps/editor/src-tauri/icons/*` pinned `binary` in `.gitattributes`). V3.1 freeze checklist:
+  real `icon.ico/icon.png/icon.icns` + `active:true` + bundle pass on Win/Linux (/macOS if targeted).
 - fs/dialog: `fs:allow-read-file/write-file/read-dir` + `dialog:allow-open/save` minimal.
   Whether dialog-picked paths outside $APPDIR auto-extend fs scope (plugin-fs × plugin-dialog
   linkage) is UNVERIFIED — e2e (dialog-pick outside $APPDIR → fs-read) tracked for UI-1 (needs WebDriver).
-- shell scope: explicit-args only in Spike (`grub-mkfont --version`, `grub2-theme-preview --help`).
-  Full conversion args (`-o/--output/-s/...`) get a second scope entry at vertical slice.
-  `grub2-theme-preview` upstream is a script — interpreter-path scope matching verified then, not now.
+- shell scope (Spike: interface only, NOT executable — no promise that convertFont/
+  truePreview run inside Spike):
+  - BLOCKER for V1.1: `grub-mkfont -o/--output/-s/-n/...` full conversion args need a
+    second explicit scope entry, otherwise Linux `convertFont()` is rejected by Tauri at runtime.
+  - BLOCKER for V1.1: `grub2-theme-preview` upstream is a script — scope matching against
+    the interpreter path (`bash`/`sh`) vs the script path must be resolved then (likely add
+    interpreter to scope or ship a sidecar binary). Spike conclusion: adapter keeps
+    `convertFont?/truePreview?` signatures only.
 - [x] Gate2-A: tela-1080p / tela-4k / archlinux byte-identical via `Buffer.equals`
   (`pnpm --filter @grub-theme/core test`).
 - [x] Gate2-B: existing-scalar / color-format / space-path-quoting / BOM / mixed-EOL pass;
@@ -34,6 +41,12 @@
 ## V3.1 freeze criteria
 1. Gate1 CI green (web + linux-tauri; Windows exe produced locally).
 2. Gate2-A 3 real themes byte-identical; Gate2-B 5 classes pass.
-3. Gate3 color exact + geometric bbox pass; text explainable.
-4. Gate4 10x alternation pass (after UI-1 unlock).
-All four → freeze V3.1 → vertical slice. Any fail → fix that layer only, no scope creep.
+3. Gate3 color exact + geometric bbox pass; text explainable. Compare object in Spike:
+   synthetic fixtures (true-device screenshots deferred to V1.1).
+4. Gate4 10x alternation pass (after UI-1 unlock; UI-1 minimal: Monaco + 4-attr form +
+   zundo, no full shadcn suite).
+5. Fixture bytes stable: `.gitattributes` (`assets/samples/** -text`) effective, CI and
+   local checkout identical.
+6. Packaging/scope checklist done: real icons + `bundle.active:true` + `grub-mkfont`
+   full-arg scope + `grub2-theme-preview` verdict (implemented or explicitly dropped).
+All six → freeze V3.1 → vertical slice. Any fail → fix that layer only, no scope creep.

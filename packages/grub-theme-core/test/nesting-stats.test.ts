@@ -21,10 +21,12 @@ describe("nesting extraction (Gate3 coverage)", () => {
     const root = parseTheme(readFileSync(join(samplesDir, "archlinux-theme.txt"), "utf8"));
     const sem = deriveSemantic(root);
     expect(sem.bootMenu?.path).toBe("root.boot_menu[0]");
-    // 6 inline + label {...} inside hbox
+    // 6 inline + label {...} inside hbox — exact paths, so a future parser change
+    // cannot silently swallow a nested item and still pass on length alone.
     expect(sem.labels.length).toBe(6);
-    expect(sem.labels[0]?.path).toBe("root.hbox[0].label[0]");
-    expect(sem.labels[5]?.path).toBe("root.hbox[0].label[5]");
+    expect(sem.labels.map((l) => l.path)).toEqual(
+      [0, 1, 2, 3, 4, 5].map((i) => `root.hbox[0].label[${i}]`)
+    );
     // circular_progress collected as progress (passthrough render in MVP)
     expect(sem.progressbars.length).toBe(1);
     expect(sem.progressbars[0]?.path).toBe("root.circular_progress[0]");

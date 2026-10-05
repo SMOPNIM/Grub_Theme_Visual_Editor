@@ -1,0 +1,7 @@
+# Fixture bytes must be identical on every machine (Gate2-A compares raw bytes).
+# -text disables all EOL conversion: git never rewrites these files on checkout,
+# regardless of core.autocrlf. Without this, Windows checkout (CRLF) and Linux CI
+# (LF) would test different inputs and Gate2-A could go red spuriously.
+assets/samples/** -text
+# Generated placeholder icons (Spike only, see docs/SPIKE-REPORT.md): binary, no conversion.
+apps/editor/src-tauri/icons/* binary

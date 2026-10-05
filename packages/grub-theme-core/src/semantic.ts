@@ -4,7 +4,13 @@ import { CSTRoot, ComponentNode, PropertyNode } from "./cst.js";
 
 export interface BoxProps {
   nodeId: string;
-  /** Stable UI path, e.g. "root.boot_menu", "root.hbox[0].label[1]". */
+  /**
+   * PATH CONTRACT (frozen for UI-1; do not change format without a migration):
+   * `root.<component>[<siblingIndex>](.<component>[<siblingIndex>])*`
+   * e.g. "root.boot_menu[0]", "root.hbox[0].label[1]".
+   * Counters are per (parentPath, componentName); top-level globals are NOT in paths.
+   * UI locates CST nodes via `path` + `nodeId`; never via positional `label[0]` guesses.
+   */
   path: string;
   left?: string;
   top?: string;
