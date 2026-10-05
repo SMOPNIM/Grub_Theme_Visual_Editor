@@ -17,16 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Fail-fast first: config-class errors (pnpm/node/install) surface before the
+      # ~1min apt install, so a bad setup doesn't burn apt time every round.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install
       - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf grub-common
       # Real-call smoke: proves the binary exists for the shell:allow-execute scope.
       # grub2-theme-preview is a Python script upstream (argv[0] may be an interpreter);
       # scope match against it is verified at vertical slice, not in Spike.
       - run: grub-mkfont --version
       - run: which grub2-theme-preview || echo "grub2-theme-preview absent (expected on CI image)"
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
-      - run: pnpm install
       - run: pnpm --filter ./apps/editor build
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
