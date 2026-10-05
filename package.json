@@ -1,0 +1,11 @@
+{
+  "name": "grub-theme-visual-editor",
+  "private": true,
+  "version": "0.0.0-spike",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter ./apps/editor dev",
+    "build": "pnpm --filter ./packages/grub-theme-core test && pnpm --filter ./apps/editor build",
+    "test": "pnpm -r test"
+  }
+}
