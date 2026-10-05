@@ -118,3 +118,8 @@ so a future beforeBuildCommand change cannot silently drop them.)
   resource-missing scan (moved EARLIER: fires on font rename, not only on export).
 Next: vertical-slice PR1 (import tela → form-edit left → Monaco+Canvas linkage →
 export zip with original asset paths).
+- [x] PR1 minimal loop (2026-10-05): single-file Web import → edit left →
+  flat zip (theme.txt at ROOT + loaded resources at verbatim paths, no assets/
+  reshuffle) + missing-refs banner/console + font-rename light scan (inline red
+  hint + console.warn iff zero .pf2 loaded). themeName defaults to title-text
+  slug else filename slug, user-editable. Integration test `pr1-loop` runs in CI.

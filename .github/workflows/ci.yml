@@ -9,8 +9,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install
-      - run: pnpm --filter @grub-theme/core test
-      - run: pnpm --filter ./apps/editor test
+      # Single workspace-wide gate: new packages are covered without editing CI.
+      - run: pnpm -r test
       - run: node scripts/collect-fixtures.mjs
       - run: pnpm --filter ./apps/editor build
   linux-tauri:

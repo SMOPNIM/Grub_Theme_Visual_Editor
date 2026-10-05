@@ -23,7 +23,14 @@ interface ThemeState {
   version: number;
   source: EditSource;
   lastFormEdit: FormEditSync | null;
+  /** Loaded resource files by ORIGINAL relative path (verbatim). Empty on Web single-file import. */
+  resources: Map<string, ArrayBuffer>;
+  /** Export base name. Default: title-text slug, else imported filename slug. */
+  themeName: string;
   loadSample: (text: string) => void;
+  /** PR1 import: single theme.txt (Web). Resources stay empty; banner says so. */
+  importFile: (fileName: string, text: string) => void;
+  setThemeName: (name: string) => void;
   applyMonacoText: (text: string) => void;
   /** Semantic-equality short-circuit: equal values never bump version/history. */
   applyFormPatch: (nodeId: string, key: string, value: string) => PatchResult;
@@ -48,7 +55,25 @@ function findNode(root: CSTRoot, nodeId: string): any | null {
   return found;
 }
 
-/** Current raw value of a property: component member or the property node itself. */
+/** slugify for default themeName: lower, non-alnum -> "-", fallback custom-theme. */
+export function slugify(s: string): string {
+  const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "custom-theme";
+}
+
+/** PR1 default: title-text slug, else imported filename slug (desktop overrides with dir name in PR2). */
+export function defaultThemeName(text: string, fileName: string): string {
+  const root = parseTheme(text);
+  let title = "";
+  for (const n of root.children as any[]) {
+    if (n.kind === "property" && n.key === "title-text") {
+      title = (n.value as string).trim();
+      break;
+    }
+  }
+  if (title) return slugify(title);
+  return slugify(fileName.replace(/\.[^.]*$/, ""));
+}
 export function currentValue(root: CSTRoot, nodeId: string, key: string): string | null {
   const target: any = findNode(root, nodeId);
   if (!target) return null;
@@ -67,7 +92,19 @@ export const useThemeStore = create<ThemeState>()(
       version: 0,
       source: "import",
       lastFormEdit: null,
-      loadSample: (text) => set({ text, version: get().version + 1, source: "import", lastFormEdit: null }),
+      resources: new Map(),
+      themeName: "custom-theme",
+      loadSample: (text) => set({ text, version: get().version + 1, source: "import", lastFormEdit: null, themeName: defaultThemeName(text, "sample-theme.txt") }),
+      importFile: (fileName, text) =>
+        set({
+          text,
+          version: get().version + 1,
+          source: "import",
+          lastFormEdit: null,
+          resources: new Map(),
+          themeName: defaultThemeName(text, fileName),
+        }),
+      setThemeName: (themeName) => set({ themeName: slugify(themeName) || get().themeName }),
       applyMonacoText: (text) =>
         set({ text, version: get().version + 1, source: "monaco", lastFormEdit: null }),
       applyFormPatch: (nodeId, key, value) => {

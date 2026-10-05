@@ -114,7 +114,7 @@ export function scanMissingAssets(root: CSTRoot, availableFiles: Set<string>): s
   const walk = (nodes: typeof root.children) => {
     for (const n of nodes) {
       if (n.kind === "property") {
-        if (["desktop-image", "desktop_image", "file", "icon_dir", "item_icon"].includes(n.key) || n.key.endsWith("_font") || n.key === "font") {
+        if (["desktop-image", "desktop_image", "file", "icon_dir", "item_icon"].includes(n.key) || /(^|[-_])font$/.test(n.key)) {
           if (n.value && !availableFiles.has(n.value)) refs.push(`${n.key}: "${n.value}" (${n.nodeId})`);
         }
       } else if (n.kind === "component") walk(n.children);
