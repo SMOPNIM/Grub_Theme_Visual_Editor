@@ -5,9 +5,10 @@
   (`tauri build --debug` full Rust link OK). Lesson: `tauri-build` demands
   `src-tauri/icons/icon.ico` even with `bundle.active:false` — placeholder icons
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
-- [ ] Gate1-Linux-desktop: CI hardened (rust-toolchain stable + rust-cache scoped to
-  src-tauri + pnpm install + explicit frontend build + `projectPath`, grub-mkfont
-  real-call smoke); awaits first green run on a pushed remote (none configured yet).
+- [ ] Gate1-Linux-desktop: CI hardened but NOT YET RUN — repo has no `origin` remote
+  (local `git push` fails: "'origin' does not appear to be a git repository").
+  BLOCKED on user action: create remote repo, `git remote add origin <url>`, push.
+  Then paste the first run log back for per-failure-type fixes.
   beforeBuildCommand uses `pnpm --filter editor ...` (cwd-safe in monorepo).
 - [x] UI-1 (frontend-only, mock adapter — no @tauri-apps/* imports): text-only store
   (zustand+zundo temporal, limit 50; CST/semantic derived, never stored) +
@@ -37,16 +38,34 @@
   `root.hbox[0].label[0..5]` (6 inline labels) + `root.circular_progress[0]` (two-line open).
   No silent empty-render: SemanticIndex recurses hbox/vbox with stable paths
   `root.<name>[i]` for UI-1. circular_progress collected as progress (MVP: passthrough render).
-- [ ] Gate3-measure: 4 components color exact (sRGB 0 tol; compare-channel accepts
-  #RGBA/#RRGGBBAA/rgba()/transparent, serialize-channel is GRUB-native only via
-  `normalizeForSerialize`, exporter warns on simulation-only) + geometric bbox ≤2px/1%
-  @1024x768/1920x1080 with `setupCanvas` DPR=1.0; text soft-gate horizontal-center ≤5% width
-  (vertical excluded).
+- [x] Gate3-measure: `apps/editor/test/gate3-measure.test.ts` 11/11 green.
+  Baseline: SYNTHETIC fixture in-test (controlled; device screenshots deferred to V1.1).
+  Colors exact (normalizeForCompare, sRGB 0 tol): #ff9248=(255,146,72),
+  cornflowerblue=(100,149,237), "128, 128, 255", #111111=(17,17,17), #ffffff.
+  | res | component | expected (x,y,w,h) | actual | diff | verdict |
+  |---|---|---|---|---|---|
+  | 1024x768 | boot_menu | 204.8,192,614.4,384 | identical | 0 | PASS |
+  | 1024x768 | label | 100,50,200,30 | identical | 0 | PASS |
+  | 1024x768 | image (100%-50) | 102.4,718,480,42 | identical | 0 | PASS |
+  | 1024x768 | progress | 327.68,629.76,368.64,20 | identical | 0 | PASS |
+  | 1920x1080 | boot_menu | 384,270,1152,540 | identical | 0 | PASS |
+  | 1920x1080 | label | 100,50,200,30 | identical | 0 | PASS |
+  | 1920x1080 | image | 192,1030,480,42 | identical | 0 | PASS |
+  | 1920x1080 | progress | 614.4,885.6,691.2,20 | 885.5999… | 1e-13 (float64 repr) | PASS (explainable) |
+  Text: soft gate only (center drift budget 5% width; vertical excluded).
+  Pixel-level raster check (getImageData border color) deferred: needs node-canvas
+  or browser; geometry+color math covers Spike.
 - [x] Gate4-store: 10x monaco↔form alternation at store level green
   (`apps/editor/test/store-alternation.test.ts`): +1 version steps, sources alternate,
   exactly 10 history entries, undo restores snapshot[9] byte-exact.
-- [ ] Gate4-full (mounted Monaco): 🔒 pending manual/UI run — store half done; full half
-  needs mounted editor (executeEdits echo-guard + debounce-cancel) after UI-1 review.
+- [ ] Gate4-full (mounted Monaco): pending manual/UI run. Echo-guard checklist
+  (single form edit of `left` must satisfy ALL three):
+  1. Monaco onChange fires ≤1 time for the executeEdits echo, and the resulting
+     commit (if any) carries source=monaco only when the user actually typed
+     (guard: applyingFormRef + debounce-cancel in SourcePane).
+  2. Store version increments by exactly +1 (no jump/loop).
+  3. zundo history grows by exactly +1 entry.
+  All three → Gate4 true green.
 
 ## V3.1 freeze criteria
 1. Gate1 CI green (web + linux-tauri; Windows exe produced locally).
