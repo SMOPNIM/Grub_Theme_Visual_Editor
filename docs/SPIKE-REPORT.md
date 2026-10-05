@@ -5,10 +5,9 @@
   (`tauri build --debug` full Rust link OK). Lesson: `tauri-build` demands
   `src-tauri/icons/icon.ico` even with `bundle.active:false` — placeholder icons
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
-- [ ] Gate1-Linux-desktop: CI hardened but NOT YET RUN — repo has no `origin` remote
-  (local `git push` fails: "'origin' does not appear to be a git repository").
-  BLOCKED on user action: create remote repo, `git remote add origin <url>`, push.
-  Then paste the first run log back for per-failure-type fixes.
+- [ ] Gate1-Linux-desktop: pushed `master` to `github.com:SMOPNIM/Grub_Theme_Visual_Editor`
+  (new branch, remote was empty; `.gitattributes` included). Awaiting first Actions run —
+  paste back: run URL, failed job (web/linux-tauri), failed step, last 50–80 log lines.
   beforeBuildCommand uses `pnpm --filter editor ...` (cwd-safe in monorepo).
 - [x] UI-1 (frontend-only, mock adapter — no @tauri-apps/* imports): text-only store
   (zustand+zundo temporal, limit 50; CST/semantic derived, never stored) +
