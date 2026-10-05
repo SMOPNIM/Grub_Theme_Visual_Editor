@@ -110,7 +110,7 @@ export function parseTheme(src: string): CSTRoot {
         }
         node.children.push({
           nodeId: nextNodeId(), kind: "property", range, raw: "",
-          leadingTrivia: " ", key: pm[1], sep: pm[2] as Sep,
+          leadingTrivia: " ", key: pm[1], sep: pm[2] as Sep, preSep: "", postSep: " ",
           value, quote, trailingComment: "",
         });
       }
@@ -153,21 +153,38 @@ export function parseTheme(src: string): CSTRoot {
       void mClose;
       return;
     }
-    // property: key : value  or key = value
-    const prop = text.match(/^(\s*)([A-Za-z_][\w-]*)\s*([:=])\s*(.*?)(\s*(#.*))?$/);
+    // property: key : value  or key = value (separator gaps preserved verbatim).
+    // Quote-aware: a `#` inside quotes never starts a trailing comment.
+    const prop = text.match(/^(\s*)([A-Za-z_][\w-]*)(\s*)([:=])(\s*)(.*)$/);
     if (prop) {
-      const [, indent, key, sepRaw, rest, , trailing] = prop;
-      let value = rest ?? "";
+      const [, indent, key, preSep, sepRaw, postSep, rest0] = prop;
+      let value = "";
       let quote: '"' | "'" | null = null;
-      const qm = value.match(/^("([^"]*)"|'([^']*)')$/);
-      if (qm) {
-        quote = value.startsWith('"') ? '"' : "'";
-        value = qm[2] ?? qm[3] ?? "";
+      let trailingComment = "";
+      const first = (rest0 ?? "")[0];
+      if (first === '"' || first === "'") {
+        const close = (rest0 as string).indexOf(first, 1);
+        if (close >= 0) {
+          quote = first as '"' | "'";
+          value = (rest0 as string).slice(1, close);
+          const after = (rest0 as string).slice(close + 1).trim();
+          if (after.startsWith("#")) trailingComment = after;
+          else if (after !== "") { push({ nodeId: nextNodeId(), kind: "unknown", range, raw, leadingTrivia: "" }); return; }
+        } else { push({ nodeId: nextNodeId(), kind: "unknown", range, raw, leadingTrivia: "" }); return; }
+      } else {
+        // Unquoted: value runs to the first `#` (GRUB comment), trailing ws trimmed.
+        const hash = (rest0 as string).indexOf("#");
+        if (hash >= 0) {
+          value = (rest0 as string).slice(0, hash).replace(/\s+$/, "");
+          trailingComment = (rest0 as string).slice(hash).trim();
+        } else {
+          value = (rest0 as string).replace(/\s+$/, "");
+        }
       }
       const node: PropertyNode = {
         nodeId: nextNodeId(), kind: "property", range, raw,
-        leadingTrivia: indent, key, sep: sepRaw as Sep,
-        value, quote, trailingComment: (trailing ?? "").trim(),
+        leadingTrivia: indent, key, sep: sepRaw as Sep, preSep, postSep,
+        value, quote, trailingComment,
       };
       push(node);
       return;

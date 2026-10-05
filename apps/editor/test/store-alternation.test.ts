@@ -20,7 +20,9 @@ describe("Gate4 alternation (store level)", () => {
     for (let i = 0; i < 10; i++) {
       if (i % 2 === 0) {
         const sem = selectSemantic(selectCst(st().text));
-        st().applyFormPatch(sem.bootMenu!.nodeId, "left", `${20 + i}%`);
+        // 21,23,...,29: always a REAL change (SAMPLE starts at 20%, so 20+i
+        // would be an empty submit at i=0 and trip the equality short-circuit).
+        st().applyFormPatch(sem.bootMenu!.nodeId, "left", `${21 + i}%`);
         expect(st().source).toBe("form");
       } else {
         st().applyMonacoText(st().text.replace(/(left = )\d+%/, `$1${30 + i}%`));

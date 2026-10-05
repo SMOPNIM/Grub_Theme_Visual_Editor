@@ -10,8 +10,14 @@ function Toolbar() {
   const source = useThemeStore((s) => s.source);
   const version = useThemeStore((s) => s.version);
   const loadSample = useThemeStore((s) => s.loadSample);
-  const undo = () => (useThemeStore as any).temporal.getState().undo();
-  const redo = () => (useThemeStore as any).temporal.getState().redo();
+  const undo = () => {
+    (useThemeStore as any).temporal.getState().undo();
+    useThemeStore.getState().markHistorySync();
+  };
+  const redo = () => {
+    (useThemeStore as any).temporal.getState().redo();
+    useThemeStore.getState().markHistorySync();
+  };
   return (
     <div style={{ display: "flex", gap: 8, padding: 8 }}>
       <button onClick={() => loadSample(tela1080)}>Load tela-1080p</button>

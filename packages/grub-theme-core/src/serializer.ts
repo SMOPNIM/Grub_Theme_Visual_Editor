@@ -16,7 +16,7 @@ function serializeNode(n: CSTNode, defaultEol: string, dirtyIds: Set<string>): s
     const needsQuote = n.quote !== null || /[\s#]/.test(n.value) || n.value === "";
     const v = needsQuote ? `${q}${n.value}${q}` : n.value;
     const trail = n.trailingComment ? ` ${n.trailingComment}` : "";
-    return `${n.leadingTrivia}${n.key}${n.sep === ":" ? ": " : " = "}${v}${trail}${eol}`;
+    return `${n.leadingTrivia}${n.key}${n.preSep}${n.sep}${n.postSep}${v}${trail}${eol}`;
   }
   if (n.kind === "component") {
     if (n.singleLine && !dirtyIds.has(n.nodeId) && n.children.every((c) => !dirtyIds.has(c.nodeId))) {

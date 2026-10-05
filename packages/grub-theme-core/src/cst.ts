@@ -29,6 +29,9 @@ export interface PropertyNode extends CSTBase {
   kind: "property";
   key: string;
   sep: Sep;
+  /** Whitespace flanking the separator, verbatim (e.g. `key= "v"` -> pre="", post=" "). */
+  preSep: string;
+  postSep: string;
   value: string; // unquoted inner value
   quote: '"' | "'" | null;
   trailingComment: string;

@@ -1,5 +1,8 @@
 // Attribute form: boot_menu left/top/width/height via RHF+zod → CSTPatch.
-// Accepts GRUB layout values: "20%", "300", "300px", "100%-50".
+// Equality-first: submitting an unchanged value never touches the store
+// (no version bump, no history entry, no Monaco echo). On a store-side
+// short-circuit ("skipped-equal") the field is synced back to the semantic
+// value so the input never visually disagrees with the model.
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -22,7 +25,7 @@ export function AttrForm() {
   const sem = useMemo(() => selectSemantic(selectCst(text)), [text]);
   const bootMenu = sem.bootMenu;
 
-  const { register, reset, handleSubmit, formState } = useForm<FormValues>({
+  const { register, reset, handleSubmit, setValue, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { left: "", top: "", width: "", height: "" },
   });
@@ -42,7 +45,14 @@ export function AttrForm() {
   const submit = (key: keyof FormValues) => handleSubmit((v) => {
     const value = v[key];
     if (value === undefined || value === "") return;
-    applyFormPatch(bootMenu.nodeId, key, value);
+    // Local equality gate: skip the store entirely when nothing changed.
+    if (value === (bootMenu[key] ?? "")) return;
+    const result = applyFormPatch(bootMenu.nodeId, key, value);
+    if (result === "skipped-equal") {
+      // Semantic tie (e.g. typed "10.0" == stored "10"): pull the field back so
+      // the input never disagrees with the model between renders.
+      setValue(key, bootMenu[key] ?? "", { shouldDirty: false });
+    }
   });
 
   return (

@@ -62,9 +62,15 @@
   Text: soft gate only (center drift budget 5% width; vertical excluded).
   Pixel-level raster check (getImageData border color) deferred: needs node-canvas
   or browser; geometry+color math covers Spike.
-- [x] Gate4-store: 10x monaco↔form alternation at store level green
-  (`apps/editor/test/store-alternation.test.ts`): +1 version steps, sources alternate,
-  exactly 10 history entries, undo restores snapshot[9] byte-exact.
+- [x] Gate4-store: 10x monaco↔form alternation green (form values 21,23,…,29 —
+  never equal to the running value, so the equality short-circuit can't mask a step).
+- Undo is TWO independent mechanisms (no shared stack; V1.1 merges them):
+  (a) Monaco-focused Ctrl+Z → Monaco's own undo → onChange → store re-parse;
+  (b) toolbar Undo/Redo buttons → zundo text-snapshot restore + wholesale
+  editor sync (`source='history'`, paused marker set so redo survives).
+- Parser fix found by the short-circuit work: `#` inside quotes no longer starts a
+  trailing comment (`"#ffffff"` used to parse as `"`); quote-aware value split +
+  verbatim separator gaps (`key= "v"` preserved even on edited lines).
 - [ ] Gate4-full (mounted Monaco): pending manual/UI run. Echo-guard checklist
   (single form edit of `left` must satisfy ALL three):
   1. Monaco onChange fires ≤1 time for the executeEdits echo, and the resulting

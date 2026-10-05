@@ -3,20 +3,20 @@
 // so zundo never stores trees and Monaco undo never double-counts.
 import { create } from "zustand";
 import { temporal } from "zundo";
-import { parseTheme, serializeTheme, applyPatch } from "@grub-theme/core";
+import { parseTheme, serializeTheme, applyPatch, valuesEqual } from "@grub-theme/core";
 import type { CSTRoot, SemanticIndex } from "@grub-theme/core";
 import { deriveSemantic } from "@grub-theme/core";
 
-export type EditSource = "monaco" | "form" | "import";
+export type EditSource = "monaco" | "form" | "import" | "history";
 
 export interface FormEditSync {
   nodeId: string;
   key: string;
-  /** 1-based line of the edited property (pre-edit == post-edit for scalar sets). */
-  line: number;
-  /** Replacement full-line text (without EOL). */
-  newLineText: string;
+  /** Store version that produced this edit — effect applies it only on match. */
+  version: number;
 }
+
+export type PatchResult = "applied" | "skipped-equal" | "skipped-missing";
 
 interface ThemeState {
   text: string;
@@ -25,7 +25,11 @@ interface ThemeState {
   lastFormEdit: FormEditSync | null;
   loadSample: (text: string) => void;
   applyMonacoText: (text: string) => void;
-  applyFormPatch: (nodeId: string, key: string, value: string) => void;
+  /** Semantic-equality short-circuit: equal values never bump version/history. */
+  applyFormPatch: (nodeId: string, key: string, value: string) => PatchResult;
+  consumeFormEdit: () => void;
+  /** Call right after temporal undo()/redo(): marks wholesale text restore. */
+  markHistorySync: () => void;
 }
 
 function findNode(root: CSTRoot, nodeId: string): any | null {
@@ -44,6 +48,18 @@ function findNode(root: CSTRoot, nodeId: string): any | null {
   return found;
 }
 
+/** Current raw value of a property: component member or the property node itself. */
+export function currentValue(root: CSTRoot, nodeId: string, key: string): string | null {
+  const target: any = findNode(root, nodeId);
+  if (!target) return null;
+  if (target.kind === "component") {
+    const prop = target.children.find((c: any) => c.kind === "property" && c.key === key);
+    return prop ? prop.value : null;
+  }
+  if (target.kind === "property") return target.value;
+  return null;
+}
+
 export const useThemeStore = create<ThemeState>()(
   temporal(
     (set, get) => ({
@@ -56,28 +72,36 @@ export const useThemeStore = create<ThemeState>()(
         set({ text, version: get().version + 1, source: "monaco", lastFormEdit: null }),
       applyFormPatch: (nodeId, key, value) => {
         const root = parseTheme(get().text);
+        const cur = currentValue(root, nodeId, key);
+        if (cur === null) return "skipped-missing";
+        if (valuesEqual(cur, value)) return "skipped-equal";
         const dirty = applyPatch(root, { nodeId, key, value, op: "set", source: "form" });
-        if (dirty.size === 0) return;
+        if (dirty.size === 0) return "skipped-missing";
         const out = serializeTheme(root, dirty);
-        // Locate edited property node for Monaco executeEdits sync.
-        let line = 0;
-        for (const id of dirty) {
-          const n = findNode(root, id);
-          if (n?.range) {
-            line = n.range.start.line;
-            break;
-          }
-        }
-        const newLineText = line > 0 ? out.split(/\r?\n/)[line - 1] : "";
+        const version = get().version + 1;
         set({
           text: out,
-          version: get().version + 1,
+          version,
           source: "form",
-          lastFormEdit: line > 0 ? { nodeId, key, line, newLineText } : null,
+          lastFormEdit: { nodeId, key, version },
         });
+        return "applied";
+      },
+      consumeFormEdit: () => set({ lastFormEdit: null }),
+      markHistorySync: () => {
+        // Paused: this marker set must NOT become a history entry (else redo dies).
+        const t = (useThemeStore as any).temporal.getState();
+        t.pause();
+        set({ source: "history", lastFormEdit: null });
+        t.resume();
       },
     }),
-    { limit: 50 }
+    {
+      limit: 50,
+      // True text-snapshot history (V3 方案A): only text+version are tracked.
+      // source/lastFormEdit are UI sync markers, never history.
+      partialize: (s: ThemeState) => ({ text: s.text, version: s.version }) as ThemeState,
+    }
   )
 );
 
