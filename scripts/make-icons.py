@@ -35,9 +35,13 @@ def grub_glyph(w):
 
 p32 = grub_glyph(32)
 p128 = grub_glyph(128)
+p512 = grub_glyph(512)
 open(os.path.join(OUT, "32x32.png"), "wb").write(p32)
 open(os.path.join(OUT, "128x128.png"), "wb").write(p128)
 open(os.path.join(OUT, "128x128@2x.png"), "wb").write(p128)
+# tauri-build generate_context! hard-requires icons/icon.png even with
+# bundle.active:false (proven by Linux CI). .icns deferred to V3.1 real branding.
+open(os.path.join(OUT, "icon.png"), "wb").write(p512)
 
 # Vista+ ICO: entries embed PNG data directly
 def ico(images):
