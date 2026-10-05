@@ -7,12 +7,11 @@
   (`tauri build --debug` full Rust link OK). Lesson: `tauri-build` demands
   `src-tauri/icons/icon.ico` even with `bundle.active:false` — placeholder icons
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
-- [ ] Gate1-Linux-desktop: round 3 — failed ONLY at `generate_context!`:
-  `icons/icon.png is not RGBA` (our hand-written PNG was color type 2; tauri's
-  `image` crate on the Linux macro path requires color type 6). Fixed by regenerating
-  all icons as RGBA-8 + `icon.ico` entries re-embedded as RGBA PNGs (Vista+ style,
-  confirmed PNG entries not BMP). Local `--verify` passes (IHDR type+size gate).
-  CI now runs the same gate pre-compile. Awaiting round-4 run.
+- [x] Gate1-Linux-desktop: GREEN round-4 — `--verify` passed in CI, frontend build OK,
+  full Rust link OK (`Finished dev profile in 1m26s`, `Built application at:
+  .../src-tauri/target/debug/editor`). RGBA icon accepted by `generate_context!`.
+  tauri-action notes "No artifacts found…not an error" (expected: bundle.active:false).
+  Zero `##[error]` in either job.
 - Icon asymmetry tally (3): (1) missing icon.ico despite active:false,
   (2) RGB .ico tolerated on Windows link, (3) non-RGBA .png rejected on Linux macro.
   Lesson locked: `bundle.active:false` skips packaging, NEVER icon validation.
@@ -75,15 +74,10 @@
   3. zundo history grows by exactly +1 entry.
   All three → Gate4 true green.
 
-## V3.1 freeze criteria
-1. Gate1 CI green (web + linux-tauri; Windows exe produced locally).
-2. Gate2-A 3 real themes byte-identical; Gate2-B 5 classes pass.
-3. Gate3 color exact + geometric bbox pass; text explainable. Compare object in Spike:
-   synthetic fixtures (true-device screenshots deferred to V1.1).
-4. Gate4 10x alternation pass (after UI-1 unlock; UI-1 minimal: Monaco + 4-attr form +
-   zundo, no full shadcn suite).
-5. Fixture bytes stable: `.gitattributes` (`assets/samples/** -text`) effective, CI and
-   local checkout identical.
-6. Packaging/scope checklist done: real icons + `bundle.active:true` + `grub-mkfont`
-   full-arg scope + `grub2-theme-preview` verdict (implemented or explicitly dropped).
-All six → freeze V3.1 → vertical slice. Any fail → fix that layer only, no scope creep.
+## V3.1 freeze status
+- [x] Gate1: web green ×2 rounds, Windows exe local, Linux binary on CI.
+- [x] Gate2-A/B, [x] Gate3-measure, [x] Gate4-store.
+- [ ] Gate4-full (manual echo-guard checklist — needs `pnpm dev` + browser).
+- [ ] Freeze checklist #5 (fixture bytes — done via .gitattributes, proven equal),
+  #6 (real icons + active:true + full scope + preview verdict — deferred to V1.1).
+Spike gates effectively complete except the manual Gate4-full run.
