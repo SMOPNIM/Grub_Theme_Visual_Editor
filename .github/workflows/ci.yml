@@ -6,10 +6,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with: { version: 9 }
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install
       - run: pnpm --filter @grub-theme/core test
+      - run: pnpm --filter ./apps/editor test
       - run: node scripts/collect-fixtures.mjs
       - run: pnpm --filter ./apps/editor build
   linux-tauri:
@@ -23,11 +25,19 @@ jobs:
       - run: grub-mkfont --version
       - run: which grub2-theme-preview || echo "grub2-theme-preview absent (expected on CI image)"
       - uses: pnpm/action-setup@v4
+        with: { version: 9 }
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
+      - run: pnpm install
+      - run: pnpm --filter ./apps/editor build
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/editor/src-tauri -> target
       - uses: tauri-apps/tauri-action@v0
         with:
+          projectPath: apps/editor/src-tauri
           args: --debug
   # dialog dynamic-auth e2e (desktop, post-Spike): open a theme.txt outside $APPDIR
   # via dialog, then fs-read it. Requires WebDriver + display; tracked for UI-1,

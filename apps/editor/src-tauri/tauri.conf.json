@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeDevCommand": "pnpm --filter editor dev",
+    "beforeBuildCommand": "pnpm --filter editor build"
   },
   "app": {
     "windows": [{ "title": "GrubThemeEditor Spike", "width": 1280, "height": 800 }],

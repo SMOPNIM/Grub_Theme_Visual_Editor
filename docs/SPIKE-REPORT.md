@@ -5,8 +5,15 @@
   (`tauri build --debug` full Rust link OK). Lesson: `tauri-build` demands
   `src-tauri/icons/icon.ico` even with `bundle.active:false` — placeholder icons
   generated via `scripts/make-icons.py` (stdlib-only); real branding before V3.1 freeze.
-- [ ] Gate1-Linux-desktop: CI job defined (webkit2gtk-4.1/gtk3/ayatana/librsvg2/patchelf +
-  rust-cache + `grub-common` for the `grub-mkfont --version` real-call smoke); awaits first green run.
+- [ ] Gate1-Linux-desktop: CI hardened (rust-toolchain stable + rust-cache scoped to
+  src-tauri + pnpm install + explicit frontend build + `projectPath`, grub-mkfont
+  real-call smoke); awaits first green run on a pushed remote (none configured yet).
+  beforeBuildCommand uses `pnpm --filter editor ...` (cwd-safe in monorepo).
+- [x] UI-1 (frontend-only, mock adapter — no @tauri-apps/* imports): text-only store
+  (zustand+zundo temporal, limit 50; CST/semantic derived, never stored) +
+  Monaco grub-theme language (highlight/completion/brace markers) + RHF+zod 4-attr
+  form (left/top/width/height → CSTPatch) + executeEdits sync (no setValue) +
+  DPR-1.0 preview with resolution switch. Real adapter after CI green.
 - Bundle note (TEMPORARY, Spike only): `bundle.active:false` (compile-only) + placeholder
   icons from `scripts/make-icons.py` (stdlib-only, must NOT be mistaken for release assets;
   `apps/editor/src-tauri/icons/*` pinned `binary` in `.gitattributes`). V3.1 freeze checklist:
@@ -35,8 +42,11 @@
   `normalizeForSerialize`, exporter warns on simulation-only) + geometric bbox ≤2px/1%
   @1024x768/1920x1080 with `setupCanvas` DPR=1.0; text soft-gate horizontal-center ≤5% width
   (vertical excluded).
-- [ ] Gate4: 10x monaco↔form alternation, no loop, undo not double-counted — 🔒 LOCKED
-  until UI-1 (Monaco mounted + form edits left/top/width/height + zundo wired).
+- [x] Gate4-store: 10x monaco↔form alternation at store level green
+  (`apps/editor/test/store-alternation.test.ts`): +1 version steps, sources alternate,
+  exactly 10 history entries, undo restores snapshot[9] byte-exact.
+- [ ] Gate4-full (mounted Monaco): 🔒 pending manual/UI run — store half done; full half
+  needs mounted editor (executeEdits echo-guard + debounce-cancel) after UI-1 review.
 
 ## V3.1 freeze criteria
 1. Gate1 CI green (web + linux-tauri; Windows exe produced locally).

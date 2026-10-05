@@ -6,13 +6,20 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "@grub-theme/core": "workspace:*",
+    "@hookform/resolvers": "^5.9.1",
+    "@monaco-editor/react": "^4.7.0",
     "immer": "^10.0.0",
+    "monaco-editor": "^0.57.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.89.0",
+    "zod": "^4.6.5",
+    "zundo": "^2.3.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
@@ -21,6 +28,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "typescript": "^5.5.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0"
   }
 }
