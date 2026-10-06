@@ -3,10 +3,44 @@
 
 const SVG: Record<string, [number, number, number]> = {
   black: [0, 0, 0], white: [255, 255, 255], red: [255, 0, 0],
-  cornflowerblue: [100, 149, 237], transparent: [0, 0, 0],
-  gray: [128, 128, 128], grey: [128, 128, 128], blue: [0, 0, 255],
-  green: [0, 128, 0], yellow: [255, 255, 0],
+  lime: [0, 255, 0], blue: [0, 0, 255], yellow: [255, 255, 0],
+  cyan: [0, 255, 255], aqua: [0, 255, 255], magenta: [255, 0, 255],
+  fuchsia: [255, 0, 255], silver: [192, 192, 192], gray: [128, 128, 128],
+  grey: [128, 128, 128], maroon: [128, 0, 0], olive: [128, 128, 0],
+  green: [0, 128, 0], purple: [128, 0, 128], teal: [0, 128, 128],
+  navy: [0, 0, 128], orange: [255, 165, 0], pink: [255, 192, 203],
+  brown: [165, 42, 42], gold: [255, 215, 0], violet: [238, 130, 238],
+  indigo: [75, 0, 130], salmon: [250, 128, 114], khaki: [240, 230, 140],
+  plum: [221, 160, 221], orchid: [218, 112, 214], tan: [210, 180, 140],
+  beige: [245, 245, 220], ivory: [255, 255, 240], snow: [255, 250, 250],
+  honeydew: [240, 255, 240], azure: [240, 255, 255], lavender: [230, 230, 250],
+  cornflowerblue: [100, 149, 237], steelblue: [70, 130, 180],
+  skyblue: [135, 206, 235], seagreen: [46, 139, 87], forestgreen: [34, 139, 34],
+  darkred: [139, 0, 0], darkblue: [0, 0, 139], darkgreen: [0, 100, 0],
+  darkgray: [169, 169, 169], darkgrey: [169, 169, 169],
+  lightgray: [211, 211, 211], lightgrey: [211, 211, 211],
+  transparent: [0, 0, 0],
 };
+
+export function isSvgName(s: string): boolean {
+  const l = s.trim().toLowerCase();
+  return l !== "transparent" && l in SVG;
+}
+
+/** Nearest SVG name by euclidean RGB distance (transparent excluded). */
+export function nearestNamed(r: number, g: number, b: number): string {
+  let best = "black";
+  let bestD = Infinity;
+  for (const [name, c] of Object.entries(SVG)) {
+    if (name === "transparent") continue;
+    const d = (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = name;
+    }
+  }
+  return best;
+}
 
 export function normalizeColor(input: string): [number, number, number] | null {
   const rgba = normalizeColorRGBA(input);

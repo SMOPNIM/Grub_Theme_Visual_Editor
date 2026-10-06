@@ -1,13 +1,12 @@
-// Attribute form: boot_menu left/top/width/height via RHF+zod → CSTPatch.
-// Equality-first: submitting an unchanged value never touches the store
-// (no version bump, no history entry, no Monaco echo). On a store-side
-// short-circuit ("skipped-equal") the field is synced back to the semantic
-// value so the input never visually disagrees with the model.
-import { useEffect, useMemo, useState } from "react";
+// Attribute form (PR3 geometry/text + PR4 color/font):
+// boot_menu left/top/width/height, label text, colors (swatch+text),
+// fonts (name+size split). Equality-first + short-circuit everywhere.
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useThemeStore, selectCst, selectSemantic } from "../store/themeStore.js";
+import { ColorField, FontField } from "./Fields.js";
 
 const layout = z.string().regex(/^(\d+(\.\d+)?%\s*(-\s*\d+(\.\d+)?(px)?)?|\d+(\.\d+)?(px)?)$/, "use %, px or pct-px (e.g. 20%, 300, 100%-50)");
 const schema = z.object({
@@ -15,11 +14,10 @@ const schema = z.object({
   top: layout.optional().or(z.literal("")),
   width: layout.optional().or(z.literal("")),
   height: layout.optional().or(z.literal("")),
-  item_font: z.string().optional().or(z.literal("")),
   label_text: z.string().optional().or(z.literal("")),
 });
 type FormValues = z.infer<typeof schema>;
-type BootKey = "left" | "top" | "width" | "height" | "item_font";
+type BootKey = "left" | "top" | "width" | "height";
 
 export function AttrForm() {
   const text = useThemeStore((s) => s.text);
@@ -27,12 +25,10 @@ export function AttrForm() {
   const applyFormPatch = useThemeStore((s) => s.applyFormPatch);
   const sem = useMemo(() => selectSemantic(selectCst(text)), [text]);
   const bootMenu = sem.bootMenu;
-  // PR1 light font check: fires on rename submit only (blur path, never onChange).
-  const [fontHint, setFontHint] = useState<string | null>(null);
 
   const { register, reset, handleSubmit, setValue, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { left: "", top: "", width: "", height: "", item_font: "", label_text: "" },
+    defaultValues: { left: "", top: "", width: "", height: "", label_text: "" },
   });
 
   // Reflect semantic → form when text changes from monaco/import (not our own submit).
@@ -42,26 +38,11 @@ export function AttrForm() {
       top: bootMenu?.top ?? "",
       width: bootMenu?.width ?? "",
       height: bootMenu?.height ?? "",
-      item_font: bootMenu?.item_font ?? "",
       label_text: sem.labels[0]?.text ?? "",
     });
-    setFontHint(null);
   }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!bootMenu) return <p>No boot_menu in theme (path: root.boot_menu[0] missing).</p>;
-
-  const checkFont = (fontValue: string) => {
-    const hasPf2 = [...useThemeStore.getState().resources.keys()].some((k) =>
-      k.toLowerCase().endsWith(".pf2")
-    );
-    if (fontValue.trim() !== "" && !hasPf2) {
-      const msg = `字体 "${fontValue}" 无对应 .pf2 已加载，导出将缺字体资源。`;
-      console.warn(`[font-scan] ${msg}`);
-      setFontHint(msg);
-    } else {
-      setFontHint(null);
-    }
-  };
 
   const submit = (key: keyof FormValues) => handleSubmit((v) => {
     const value = v[key];
@@ -80,7 +61,7 @@ export function AttrForm() {
       return;
     }
     // Local equality gate: skip the store entirely when nothing changed.
-    const current = key === "item_font" ? bootMenu.item_font : bootMenu[key as BootKey];
+    const current = bootMenu[key as BootKey];
     if (value === (current ?? "")) return;
     const result = applyFormPatch(bootMenu.nodeId, key, value);
     if (result === "skipped-equal") {
@@ -88,26 +69,60 @@ export function AttrForm() {
       // the input never disagrees with the model between renders.
       setValue(key, current ?? "", { shouldDirty: false });
     }
-    if (key === "item_font" && result === "applied") checkFont(value);
   });
+
+  const label0 = sem.labels[0];
+  const prog0 = sem.progressbars[0];
+  const termFont = sem.globals["terminal-font"];
 
   return (
     <form>
       <h3>boot_menu <small>{bootMenu.path}</small></h3>
-      {(["left", "top", "width", "height", "item_font"] as const).map((k) => (
+      {(["left", "top", "width", "height"] as const).map((k) => (
         <div key={k}>
           <label>{k}</label>
           <input {...register(k)} onBlur={submit(k)} />
           {formState.errors[k] && <span>{formState.errors[k]?.message}</span>}
         </div>
       ))}
-      {sem.labels[0] && (
-        <div>
-          <label>label_text <small>{sem.labels[0].path}</small></label>
-          <input {...register("label_text")} onBlur={submit("label_text")} />
-        </div>
+      {bootMenu.item_color !== undefined && (
+        <ColorField nodeId={bootMenu.nodeId} propKey="item_color" label="item_color" path={bootMenu.path} current={bootMenu.item_color} />
       )}
-      {fontHint && <p style={{ color: "red" }}>{fontHint}</p>}
+      {bootMenu.selected_item_color !== undefined && (
+        <ColorField nodeId={bootMenu.nodeId} propKey="selected_item_color" label="selected_item_color" path={bootMenu.path} current={bootMenu.selected_item_color} />
+      )}
+      {bootMenu.item_font !== undefined && (
+        <FontField nodeId={bootMenu.nodeId} fontKey="item_font" label="item_font" path={bootMenu.path} current={bootMenu.item_font} />
+      )}
+      {label0 && (
+        <>
+          <h3>label <small>{label0.path}</small></h3>
+          <div>
+            <label>label_text</label>
+            <input {...register("label_text")} onBlur={submit("label_text")} />
+          </div>
+          {label0.color !== undefined && (
+            <ColorField nodeId={label0.nodeId} propKey="color" label="color" path={label0.path} current={label0.color} />
+          )}
+        </>
+      )}
+      {prog0 && (
+        <>
+          <h3>progress <small>{prog0.path}</small></h3>
+          {prog0.fg_color !== undefined && (
+            <ColorField nodeId={prog0.nodeId} propKey="fg_color" label="fg_color" path={prog0.path} current={prog0.fg_color} />
+          )}
+          {prog0.bg_color !== undefined && (
+            <ColorField nodeId={prog0.nodeId} propKey="bg_color" label="bg_color" path={prog0.path} current={prog0.bg_color} />
+          )}
+        </>
+      )}
+      {termFont && (
+        <>
+          <h3>global</h3>
+          <FontField nodeId={termFont.nodeId} fontKey="terminal-font" label="terminal-font" path="root (global)" current={termFont.value} />
+        </>
+      )}
       <p>version {version}</p>
     </form>
   );

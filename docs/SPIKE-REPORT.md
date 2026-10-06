@@ -136,3 +136,12 @@ export zip with original asset paths).
   Empty field = remove line (GRUB default); missing key untouched. Single-line
   multi-attr safe (full-line replace). Remove path deletes the PRE-edit model line
   + parks cursor (unavoidable move, documented).
+- [x] PR4 color+font formats (2026-10-06): boot item/selected + label color +
+  progress fg/bg (fields carry component path, never bare names); item_font +
+  global terminal-font as name/size split inputs (size validated numeric).
+  Write-back preserves the STORED spelling family (named->nearest name, hexN->hexN,
+  rgb->rgb); rgba/transparent into native = hex approximation + MUST-warn amber
+  hint, never silent; unparseable rejected with red hint. Highlight linkage reads
+  selected_item_color (normal rows keep item_color). Font scan now three-sourced
+  (inline red + console + export banner) via shared scanExportRefs. No insert,
+  no mkfont, no blocking (PR5).

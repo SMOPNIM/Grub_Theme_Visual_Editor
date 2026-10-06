@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import { parseTheme, serializeTheme, applyPatch, valuesEqual } from "@grub-theme/core";
 import type { CSTRoot, SemanticIndex } from "@grub-theme/core";
-import { deriveSemantic } from "@grub-theme/core";
+import { deriveSemantic, normalizeColor, convertColorInput } from "@grub-theme/core";
 import { findThemeEntry, relativizeToTheme } from "../platform/paths.js";
 
 export type EditSource = "monaco" | "form" | "import" | "history";
@@ -21,6 +21,15 @@ export interface FormEditSync {
 }
 
 export type PatchResult = "applied" | "skipped-equal" | "skipped-missing";
+
+export interface ColorPatchResult {
+  status: "applied" | "skipped-equal" | "skipped-missing" | "invalid";
+  /** Actually written spelling (original family preserved). */
+  written?: string;
+  /** True when the input family differed (e.g. rgba into hex): caller must warn. */
+  formatChanged?: boolean;
+  detail?: string;
+}
 
 interface ThemeState {
   text: string;
@@ -44,6 +53,13 @@ interface ThemeState {
   applyMonacoText: (text: string) => void;
   /** Semantic-equality short-circuit: equal values never bump version/history. */
   applyFormPatch: (nodeId: string, key: string, value: string) => PatchResult;
+  /**
+   * PR4 color path: free-form CSS input rewritten in the STORED value's family.
+   * Same normalized color -> skipped-equal (spelling intent does not bump).
+   * Unparseable -> invalid (nothing written). Family change -> applied with
+   * formatChanged: true (caller warns, never silent).
+   */
+  applyColorPatch: (nodeId: string, key: string, cssValue: string) => ColorPatchResult;
   /**
    * PR3 rule: empty field = GRUB default. Removes the property line instead of
    * writing an empty value. Returns false when there was nothing to remove.
@@ -195,6 +211,31 @@ export const useThemeStore = create<ThemeState>()(
           lastFormEdit: { nodeId, key, version, op: "remove", line: propLine },
         });
         return true;
+      },
+      applyColorPatch: (nodeId, key, cssValue) => {
+        const root = parseTheme(get().text);
+        const cur = currentValue(root, nodeId, key);
+        if (cur === null) return { status: "skipped-missing" };
+        const conv = convertColorInput(cssValue, cur);
+        if (!conv.ok) return { status: "invalid", detail: `"${cssValue}" 不是可识别的颜色` };
+        // Same meaning (any spelling) -> skip: no bump, no history.
+        if (valuesEqual(cur, cssValue)) return { status: "skipped-equal" };
+        const dirty = applyPatch(root, { nodeId, key, value: conv.written, op: "set", source: "form" });
+        if (dirty.size === 0) return { status: "skipped-missing" };
+        const out = serializeTheme(root, dirty);
+        const version = get().version + 1;
+        set({
+          text: out,
+          version,
+          source: "form",
+          lastFormEdit: { nodeId, key, version, op: "set", line: editedLine(root, dirty) },
+        });
+        return {
+          status: "applied",
+          written: conv.written,
+          formatChanged: conv.formatChanged,
+          detail: `按原 ${conv.fromFamily} 格式写入 ${conv.written}`,
+        };
       },
       consumeFormEdit: () => set({ lastFormEdit: null }),
       markHistorySync: () => {
