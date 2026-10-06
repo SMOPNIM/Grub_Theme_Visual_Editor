@@ -131,3 +131,8 @@ export zip with original asset paths).
   (`platform/paths.ts`, tested posix/win/subdir). themeName: dirname >
   title-text > filename. Missing split: amber "not loaded" vs red "缺 N 项".
   Glob refs (`select_*.png`) stay listed (GRUB expands at runtime; honest).
+- [x] PR3 geometry+text attrs (2026-10-06): left/top/width/height + label text
+  (colors/fonts deferred to PR4). toPx 8 groups + verbatim expression write-back.
+  Empty field = remove line (GRUB default); missing key untouched. Single-line
+  multi-attr safe (full-line replace). Remove path deletes the PRE-edit model line
+  + parks cursor (unavoidable move, documented).

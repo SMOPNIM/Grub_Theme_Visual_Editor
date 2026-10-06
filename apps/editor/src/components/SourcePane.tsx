@@ -62,30 +62,54 @@ export function SourcePane() {
     // Path (a): versioned, consume-once surgical edit.
     if (source === "form" && lastFormEdit && lastFormEdit.version === version) {
       if (debounceRef.current) clearTimeout(debounceRef.current); // cancel stale parse
-      // Live range: re-parse CURRENT text; cached rows may have drifted.
-      const cst = selectCst(useThemeStore.getState().text);
-      let line = 0;
-      const walk = (nodes: any[]) => {
-        for (const n of nodes) {
-          if (n.nodeId === lastFormEdit.nodeId) {
-            // Property node itself, or first property child of the component.
-            const prop =
-              n.kind === "property"
-                ? n
-                : n.children?.find((c: any) => c.kind === "property" && c.key === lastFormEdit.key);
-            if (prop?.range) line = prop.range.start.line;
-            return;
-          }
-          if (n.kind === "component") walk(n.children);
-          if (line) return;
-        }
-      };
-      walk(cst.children as any[]);
       useThemeStore.getState().consumeFormEdit();
-      if (line > 0) {
-        const newLineText = useThemeStore.getState().text.split(/\r?\n/)[line - 1] ?? "";
-        applyingFormRef.current = true;
-        try {
+      applyingFormRef.current = true;
+      try {
+        if (lastFormEdit.op === "remove") {
+          // Structural delete in PRE-edit model coordinates: drop the whole line
+          // and park the cursor at the deletion point (cursor must move — the line
+          // it sat on is gone).
+          const line = Math.min(lastFormEdit.line, model.getLineCount());
+          if (line > 0) {
+            const nextLine = Math.min(line + 1, model.getLineCount());
+            editor.executeEdits("form-remove", [
+              {
+                range: {
+                  startLineNumber: line, startColumn: 1,
+                  endLineNumber: nextLine,
+                  endColumn: nextLine > line ? 1 : model.getLineMaxColumn(line),
+                },
+                text: "",
+                forceMoveMarkers: true,
+              },
+            ]);
+            editor.setPosition({ lineNumber: Math.min(line, model.getLineCount()), column: 1 });
+          }
+          return;
+        }
+        // Live range: re-parse CURRENT text; cached rows may have drifted.
+        // Full-line replace is correct even when several props share one line
+        // (single-line components): the replacement spans the whole line.
+        const cst = selectCst(useThemeStore.getState().text);
+        let line = 0;
+        const walk = (nodes: any[]) => {
+          for (const n of nodes) {
+            if (n.nodeId === lastFormEdit.nodeId) {
+              // Property node itself, or first property child of the component.
+              const prop =
+                n.kind === "property"
+                  ? n
+                  : n.children?.find((c: any) => c.kind === "property" && c.key === lastFormEdit.key);
+              if (prop?.range) line = prop.range.start.line;
+              return;
+            }
+            if (n.kind === "component") walk(n.children);
+            if (line) return;
+          }
+        };
+        walk(cst.children as any[]);
+        if (line > 0) {
+          const newLineText = useThemeStore.getState().text.split(/\r?\n/)[line - 1] ?? "";
           editor.executeEdits("form-sync", [
             {
               range: {
@@ -96,9 +120,9 @@ export function SourcePane() {
               forceMoveMarkers: true,
             },
           ]);
-        } finally {
-          applyingFormRef.current = false;
         }
+      } finally {
+        applyingFormRef.current = false;
       }
       return;
     }

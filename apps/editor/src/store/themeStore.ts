@@ -15,6 +15,9 @@ export interface FormEditSync {
   key: string;
   /** Store version that produced this edit — effect applies it only on match. */
   version: number;
+  op: "set" | "remove";
+  /** 1-based model line of the edit in PRE-edit coordinates (remove path). */
+  line: number;
 }
 
 export type PatchResult = "applied" | "skipped-equal" | "skipped-missing";
@@ -41,6 +44,11 @@ interface ThemeState {
   applyMonacoText: (text: string) => void;
   /** Semantic-equality short-circuit: equal values never bump version/history. */
   applyFormPatch: (nodeId: string, key: string, value: string) => PatchResult;
+  /**
+   * PR3 rule: empty field = GRUB default. Removes the property line instead of
+   * writing an empty value. Returns false when there was nothing to remove.
+   */
+  removeProperty: (nodeId: string, key: string) => boolean;
   consumeFormEdit: () => void;
   /** Call right after temporal undo()/redo(): marks wholesale text restore. */
   markHistorySync: () => void;
@@ -90,6 +98,26 @@ export function currentValue(root: CSTRoot, nodeId: string, key: string): string
   }
   if (target.kind === "property") return target.value;
   return null;
+}
+
+/** 1-based line of a property in PRE-edit coordinates (0 when absent). */
+export function propLineOf(target: any, key: string): number {
+  if (!target) return 0;
+  if (target.kind === "component") {
+    const prop = target.children.find((c: any) => c.kind === "property" && c.key === key);
+    return prop?.range ? prop.range.start.line : 0;
+  }
+  if (target.kind === "property") return target.range ? target.range.start.line : 0;
+  return 0;
+}
+
+/** 1-based line of the first dirty node (set path). */
+function editedLine(root: CSTRoot, dirty: Set<string>): number {
+  for (const id of dirty) {
+    const n: any = findNode(root, id);
+    if (n?.range) return n.range.start.line;
+  }
+  return 0;
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -148,9 +176,25 @@ export const useThemeStore = create<ThemeState>()(
           text: out,
           version,
           source: "form",
-          lastFormEdit: { nodeId, key, version },
+          lastFormEdit: { nodeId, key, version, op: "set", line: editedLine(root, dirty) },
         });
         return "applied";
+      },
+      removeProperty: (nodeId, key) => {
+        const root = parseTheme(get().text);
+        const target: any = findNode(root, nodeId);
+        const propLine = propLineOf(target, key);
+        if (propLine <= 0) return false; // nothing to remove: no bump, no history
+        applyPatch(root, { nodeId, key, value: "", op: "remove", source: "form" });
+        const out = serializeTheme(root, new Set());
+        const version = get().version + 1;
+        set({
+          text: out,
+          version,
+          source: "form",
+          lastFormEdit: { nodeId, key, version, op: "remove", line: propLine },
+        });
+        return true;
       },
       consumeFormEdit: () => set({ lastFormEdit: null }),
       markHistorySync: () => {

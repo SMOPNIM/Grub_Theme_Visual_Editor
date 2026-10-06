@@ -16,8 +16,10 @@ const schema = z.object({
   width: layout.optional().or(z.literal("")),
   height: layout.optional().or(z.literal("")),
   item_font: z.string().optional().or(z.literal("")),
+  label_text: z.string().optional().or(z.literal("")),
 });
 type FormValues = z.infer<typeof schema>;
+type BootKey = "left" | "top" | "width" | "height" | "item_font";
 
 export function AttrForm() {
   const text = useThemeStore((s) => s.text);
@@ -30,7 +32,7 @@ export function AttrForm() {
 
   const { register, reset, handleSubmit, setValue, formState } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { left: "", top: "", width: "", height: "", item_font: "" },
+    defaultValues: { left: "", top: "", width: "", height: "", item_font: "", label_text: "" },
   });
 
   // Reflect semantic → form when text changes from monaco/import (not our own submit).
@@ -41,6 +43,7 @@ export function AttrForm() {
       width: bootMenu?.width ?? "",
       height: bootMenu?.height ?? "",
       item_font: bootMenu?.item_font ?? "",
+      label_text: sem.labels[0]?.text ?? "",
     });
     setFontHint(null);
   }, [version]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -62,9 +65,22 @@ export function AttrForm() {
 
   const submit = (key: keyof FormValues) => handleSubmit((v) => {
     const value = v[key];
-    if (value === undefined || value === "") return;
+    // PR3 rule: empty field = GRUB default -> remove the property line.
+    if (value === undefined || value === "") {
+      const target = key === "label_text" ? sem.labels[0] : bootMenu;
+      const targetKey = key === "label_text" ? "text" : (key as string);
+      if (target) useThemeStore.getState().removeProperty(target.nodeId, targetKey);
+      return;
+    }
+    if (key === "label_text") {
+      const label = sem.labels[0];
+      if (!label || value === (label.text ?? "")) return;
+      const result = applyFormPatch(label.nodeId, "text", value);
+      if (result === "skipped-equal") setValue(key, label.text ?? "", { shouldDirty: false });
+      return;
+    }
     // Local equality gate: skip the store entirely when nothing changed.
-    const current = key === "item_font" ? bootMenu.item_font : bootMenu[key];
+    const current = key === "item_font" ? bootMenu.item_font : bootMenu[key as BootKey];
     if (value === (current ?? "")) return;
     const result = applyFormPatch(bootMenu.nodeId, key, value);
     if (result === "skipped-equal") {
@@ -85,6 +101,12 @@ export function AttrForm() {
           {formState.errors[k] && <span>{formState.errors[k]?.message}</span>}
         </div>
       ))}
+      {sem.labels[0] && (
+        <div>
+          <label>label_text <small>{sem.labels[0].path}</small></label>
+          <input {...register("label_text")} onBlur={submit("label_text")} />
+        </div>
+      )}
       {fontHint && <p style={{ color: "red" }}>{fontHint}</p>}
       <p>version {version}</p>
     </form>
